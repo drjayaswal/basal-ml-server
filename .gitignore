@@ -1,0 +1,32 @@
+# --- Python (FastAPI & ML) ---
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+venv/
+env/
+build/
+dist/
+*.egg-info/
+
+# --- ML Model Artifacts ---
+# Do not track large model files; use DVC or cloud storage instead
+*.pth
+*.pkl
+*.h5
+*.joblib
+*.onnx
+*.weights
+/models/downloads/
+
+# --- IDE & OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Databases ---
+*.sqlite3
+*.db

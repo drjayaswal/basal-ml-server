@@ -1,0 +1,29 @@
+name: biasbreaker
+
+# --- Local Image Context ---
+
+services:
+  ml-server:
+    container_name: ml-server
+    build: .
+    ports:
+      - "8001:8001"
+    restart: always
+
+networks:
+  default:
+    name: biasbreaker-network
+
+
+# --- hub.docker Image Context ---
+# services:
+#   ml-server:
+#     container_name: ml-server
+#     build: .
+#     ports:
+#       - "8001:8001"
+#     restart: always
+
+# networks:
+#   default:
+#     name: biasbreaker-network

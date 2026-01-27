@@ -1,7 +1,7 @@
 from typing import List
 from pydantic import BaseModel
 
-class FileData(BaseModel):
+class AnalysisRequest(BaseModel):
+    file_url: str
     filename: str
-    words: List[str]
     description: str

@@ -1,38 +1,98 @@
-from fastapi import FastAPI
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from app.services.clean import text_to_set
-from app.services.types import FileData
-from app.services.radar import generate_radar_data
+import boto3
+import httpx
+from app.config import settings
+from urllib.parse import urlparse
+from botocore.config import Config
+from app.services.process import process
+from fastapi import FastAPI, HTTPException
+from app.services.extract import extext, extract_text_from_url
 
+get_settings = settings()
 app = FastAPI()
 
-@app.post("/analyze")
-async def analyze(data: FileData):
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=get_settings.AWS_ACCESS_KEY,
+    aws_secret_access_key=get_settings.AWS_SECRET_ACCESS_KEY,
+    region_name=get_settings.AWS_REGION,
+    config=Config(
+        signature_version='s3v4',
+        retries={'max_attempts': 5},
+        s3={'addressing_style': 'virtual'}
+    )
+)
 
-    input_text = " ".join(data.words)
-    vectorizer = TfidfVectorizer(stop_words='english')
-    tfidf_matrix = vectorizer.fit_transform([input_text, data.description])
-    similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-    
-    desc_set = text_to_set(data.description)
-    file_set = text_to_set(data.words)
-    
-    full_matched = sorted(list(desc_set.intersection(file_set)))
-    full_missing = sorted(list(desc_set.difference(file_set)))
+@app.post("/analyze-s3")
+async def analyze_s3(data: dict):
+    file_url = data.get('file_url')
+    description = data.get('description')
+    filename = data.get('filename', 's3_file')
 
-    radar_data = generate_radar_data(full_matched, full_missing)
+    if not file_url or not description:
+        raise HTTPException(status_code=400, detail="Missing file_url or description")
 
-    return {
-        "filename": data.filename,
-        "match_score": round(float(similarity), 4),
-        "status": "High Match" if similarity > 0.6 else "Low Match",
-        "analysis_details": {
-            "matched_keywords": full_matched[:10],
-            "total_matches": len(full_matched),
-            "missing_keywords": full_missing[:10],
-            "total_lags": len(full_missing),
-            "radar_data": radar_data,
-            "summary": f"Identified {len(full_matched)} hits and {len(full_missing)} missing requirements."
-        }
-    }
+    try:
+        resume_text = await extext(file_url)
+        
+        results = await process(resume_text, description, filename)
+
+        try:
+            parsed_url = urlparse(file_url)
+            host_parts = parsed_url.netloc.split('.')
+            
+            if host_parts[0] == 's3':
+                path_parts = parsed_url.path.lstrip('/').split('/')
+                bucket_name = path_parts[0]
+                s3_key = "/".join(path_parts[1:])
+            else:
+                bucket_name = host_parts[0]
+                s3_key = parsed_url.path.lstrip('/')
+            
+            s3_key = s3_key.split('?')[0]
+            
+            s3_client.delete_object(Bucket=bucket_name, Key=s3_key)
+            print(f"Cleanup Success: Deleted {s3_key} from {bucket_name}")
+        except Exception as delete_err:
+            print(f"Cleanup Failed (Non-critical): {delete_err}")
+
+        return results
+
+    except Exception as e:
+        print(f"S3 Route Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/analyze-drive")
+async def analyze_drive(data: dict):
+    file_id = data.get("file_id")
+    token = data.get("google_token")
+    description = data.get("description", "")
+    filename = data.get("filename", "drive_file")
+    mime_type = data.get("mime_type", "")
+
+    if not file_id or not token:
+        raise HTTPException(status_code=400, detail="Missing credentials")
+
+    try:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            if "google-apps" in mime_type:
+                url = f"https://www.googleapis.com/drive/v3/files/{file_id}/export?mimeType=application/pdf"
+                target_mime = "application/pdf"
+            else:
+                url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+                target_mime = mime_type
+
+            resp = await client.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=45.0)
+
+            if resp.status_code != 200:
+                raise Exception(f"Google Drive Error {resp.status_code}: {resp.text[:100]}")
+
+            if len(resp.content) < 200:
+                 raise Exception("File content too small; likely a failed download.")
+
+            resume_text = extract_text_from_url(resp.content, target_mime)
+
+        return await process(resume_text, description, filename)
+
+    except Exception as e:
+        print(f"Drive Logic Crash: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

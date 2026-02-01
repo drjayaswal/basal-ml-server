@@ -27,12 +27,10 @@ async def analyze_s3(data: dict):
             if s3_key.startswith(f"{bucket_name}/"):
                 s3_key = s3_key.replace(f"{bucket_name}/", "", 1)
             s3_client.delete_object(Bucket=bucket_name, Key=s3_key)
-            print(f"Cleanup Success: Deleted {s3_key}")
         except Exception as delete_err:
-            print(f"Cleanup Failed (Non-critical): {delete_err}")
+            raise Exception({"message":delete_err})
         return results
     except Exception as e:
-        print(f"S3 Route Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -61,5 +59,4 @@ async def analyze_drive(data: dict):
             resume_text = extract.text(resp.content, target_mime)
         return await process(resume_text, description, filename)
     except Exception as e:
-        print(f"Drive Logic Crash: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

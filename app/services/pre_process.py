@@ -24,7 +24,7 @@ def text(content: bytes, mime_type: str) -> str:
         else:
             text = content.decode("utf-8", errors="ignore")
     except Exception as e:
-        print(f"Extraction Error: {str(e)}")
+        raise Exception({"message":f"Extraction Error: {str(e)}"})
     return text.strip()
 
 async def text_from_url(url: str):

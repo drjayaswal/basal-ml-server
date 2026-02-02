@@ -27,7 +27,7 @@ ENV PYTHONUNBUFFERED=1
 ENV NLTK_DATA=/app/nltk_data
 
 # Pre-download NLTK data into the image
-RUN python -m nltk.downloader -d /app/nltk_data punkt punkt_tab
+RUN python -m nltk.downloader -d /app/nltk_data punkt punkt_tab averaged_perceptron_tagger_eng wordnet omw-1.4 stopwords maxent_ne_chunker words
 
 EXPOSE 10000
 

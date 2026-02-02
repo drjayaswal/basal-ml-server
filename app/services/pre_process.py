@@ -1,7 +1,14 @@
-import io
 import re
+import os
+import io
 import nltk
 import httpx
+
+nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
+nltk.data.path.append(nltk_data_path)
+nltk.download('punkt')
+nltk.download('punkt_tab')
+
 from docx import Document
 from PyPDF2 import PdfReader
 from nltk.tokenize import word_tokenize

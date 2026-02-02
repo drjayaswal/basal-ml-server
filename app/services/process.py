@@ -4,6 +4,14 @@ import spacy
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 from app.services.pre_process import filter_noise,get_info
+import nltk
+import os
+
+nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
+nltk.data.path.append(nltk_data_path)
+nltk.download('punkt')
+nltk.download('punkt_tab')
+
 
 try:
     nlp = spacy.load("en_core_web_md")

@@ -1,5 +1,9 @@
 import httpx
 import urllib.parse
+import nltk
+
+nltk.download('punkt')
+nltk.download('punkt_tab')
 from app.config import settings
 from app.libs.aws_client import s3_client
 from app.services.process import process

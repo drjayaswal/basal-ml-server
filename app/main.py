@@ -11,7 +11,11 @@ get_settings = settings()
 
 @app.get("/")
 def read_root():
-    return {"status": "BiasBreaker ML Server is running"}
+    return {"status": "BiasBreaker ML Server is running..."}
+
+@app.get("/health")
+async def health_check():
+    return {"service":"ML Server", "status": "healthy", "active":True}
 
 @app.post("/analyze-s3")
 async def analyze_s3(data: dict):

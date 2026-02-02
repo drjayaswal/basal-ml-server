@@ -3,6 +3,7 @@ import nltk
 import spacy
 from fastapi import FastAPI, UploadFile, File
 import app.services.pre_process as extract
+from app.services.process import process2
 
 app = FastAPI()
 
@@ -23,6 +24,7 @@ async def get_score(resume: UploadFile = File(...), jd: UploadFile = File(...)):
     jd_raw = extract.text(await jd.read(), jd.filename)
     resume_info = extract.get_info(resume_raw)
     resume_processed = resume_raw.replace(".", " ")
+    return await process2(resume_processed,jd_raw,resume.filename)
     jd_skills, jd_noise = extract.filter_noise(jd_raw)
     res_skills, res_noise = extract.filter_noise(resume_processed)
     set_jd = set(jd_skills)
@@ -36,24 +38,17 @@ async def get_score(resume: UploadFile = File(...), jd: UploadFile = File(...)):
     semantic_score = doc_res.similarity(doc_jd) * 100 if jd_skills and res_skills else 0
     final_score = (lexical_score * 0.6) + (semantic_score * 0.4)
 
+
     return {
-        "match_score": f"{round(final_score, 2)}%",
-        "ml_insights": {
-            "lexical_match_percent": f"{round(lexical_score, 2)}%",
-            "semantic_similarity_percent": f"{round(semantic_score, 2)}%"
-        },
-        "resume_analysis": {
-            "candidate_skills": res_skills,
-            "candidate_noise_filtered": len(res_noise)
-        },
-        "jd_analysis": {
-            "required_skills": jd_skills,
-            "jd_noise_filtered": len(jd_noise)
-        },
-        "comparison": {
-            "matched_skills": list(matched),
-            "missing_skills": list(missing),
-            "extra_candidate_skills": list(unrelated)
-        },
-        "candidate_info": resume_info
-    }
+            "status": "success",
+            "filename": resume.filename,
+            "match_score": round(final_score, 2),
+            "analysis_details": {
+                "matched_keywords": sorted(list(matched))[:15],
+                "missing_keywords": sorted(list(missing))[:15],
+                "total_matches": sorted(list(matched)),
+                "total_lags": sorted(list(missing)),
+                "summary": f"Analyzed {resume.filename}"
+            },
+            "candidate_info": resume_info,
+        }

@@ -38,4 +38,4 @@ EXPOSE 7860
 
 # IMPORTANT: If your main.py is inside the 'app' folder, use app.main:app
 # If main.py is in the root directory, use main:app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]

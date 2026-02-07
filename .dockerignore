@@ -21,3 +21,12 @@ dist/
 # --- Git files ---
 .git
 .gitignore
+
+.venv/
+env/
+venv/
+__pycache__/
+.git/
+.env
+data/
+chroma_db/

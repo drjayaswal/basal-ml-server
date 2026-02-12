@@ -1,8 +1,8 @@
 ---
-title: Alluvium ML Server
-emoji: 🚀
-colorFrom: blue
-colorTo: red
+title: Alluvium Model
+emoji: ⚙️
+colorFrom: indigo
+colorTo: rose
 sdk: docker
 app_port: 7860
 ---
